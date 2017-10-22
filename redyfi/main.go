@@ -4,6 +4,7 @@ import (
 	"flag"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"regexp"
 )
@@ -35,6 +36,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// catch only the IP address from the result string. response body format:
+	// Current IP Address: [0-255].[0-255].[0-255].[0-255]
 	IPMatcher, err := regexp.Compile(`\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}`)
 
 	if err != nil {
@@ -42,11 +45,15 @@ func main() {
 	}
 
 	IPAddr := IPMatcher.Find(body)
-
 	if IPAddr == nil {
 		log.Fatal(err)
-
 	}
+
+	// validate the IP address
+	if net.ParseIP(string(IPAddr)) == nil {
+		log.Fatal(err)
+	}
+
 	log.Printf("Seems like current IP address is: %s\n", IPAddr)
 	log.Printf("Attempting to update...")
 
