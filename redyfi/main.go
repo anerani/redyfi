@@ -8,6 +8,11 @@ import (
 	"regexp"
 )
 
+var (
+	checkIPURL      = "http://checkip.dy.fi/"
+	updateIPBaseURL = "https://www.dy.fi/nic/update?hostname="
+)
+
 func main() {
 
 	userName := flag.String("username", "", "dy.fi username")
@@ -15,8 +20,6 @@ func main() {
 	hostName := flag.String("hostname", "", "hostname to update")
 	eMail := flag.String("mail", "", "email address for user agent header")
 	flag.Parse()
-
-	checkIPURL := "http://checkip.dy.fi/"
 
 	response, err := http.Get(checkIPURL)
 
@@ -47,7 +50,7 @@ func main() {
 	log.Printf("Seems like current IP address is: %s\n", IPAddr)
 	log.Printf("Attempting to update...")
 
-	updateIPURL := "https://www.dy.fi/nic/update?hostname=" + *hostName
+	updateIPURL := updateIPBaseURL + *hostName
 
 	log.Printf(updateIPURL + "\n")
 	request, err := http.NewRequest("GET", updateIPURL, nil)
