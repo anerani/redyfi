@@ -57,7 +57,7 @@ func main() {
 	}
 
 	request.SetBasicAuth(*userName, *passWord)
-	request.Header.Set("User-Agent", "dyfi-refresh/0.0.1 ("+*eMail+")")
+	request.Header.Set("User-Agent", "redyfi/0.0.1 ("+*eMail+")")
 
 	client := &http.Client{}
 
