@@ -1,27 +1,27 @@
 package main
 
 import (
-	"flag"
-	"log"
+    "flag"
+    "log"
 
-	"github.com/anerani/redyfi/dyficlient"
+    "github.com/anerani/redyfi/dyficlient"
 )
 
 func main() {
 
-	username := flag.String("username", "", "dy.fi username")
-	password := flag.String("password", "", "dy.fi password")
-	hostname := flag.String("hostname", "", "hostname to update")
-	email := flag.String("mail", "", "email address for user agent header")
-	flag.Parse()
+    username := flag.String("username", "", "dy.fi username")
+    password := flag.String("password", "", "dy.fi password")
+    hostname := flag.String("hostname", "", "hostname to update")
+    email := flag.String("mail", "", "email address for user agent header")
+    flag.Parse()
 
-	IPAddr := dyficlient.CheckIP()
+    IPAddr := dyficlient.CheckIP()
 
-	log.Printf("Seems like current IP address is: %s\n", IPAddr)
-	log.Printf("Attempting to update...")
+    log.Printf("Seems like current IP address is: %s\n", IPAddr)
+    log.Printf("Attempting to update...")
 
-	responseBody, responseStatus := dyficlient.UpdateIP(username, password, hostname, email)
+    responseBody, responseStatus := dyficlient.UpdateIP(username, password, hostname, email)
 
-	log.Printf("Response status: %s\n", responseStatus)
-	log.Printf("Response body: %s\n", responseBody)
+    log.Printf("Response status: %s\n", responseStatus)
+    log.Printf("Response body: %s\n", responseBody)
 }
