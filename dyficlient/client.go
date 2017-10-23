@@ -44,7 +44,7 @@ func CheckIP() []byte {
 
     // validate the IP address
     if net.ParseIP(string(IPAddr)) == nil {
-        log.Fatal(err)
+        log.Fatalf("No valid IP address found. Server response was: %s", body)
     }
 
     return IPAddr
@@ -63,7 +63,7 @@ func UpdateIP(username *string, password *string, hostname *string, email *strin
     }
 
     request.SetBasicAuth(*username, *password)
-    request.Header.Set("User-Agent", "redyfi/0.0.2 ("+*email+")")
+    request.Header.Set("User-Agent", "redyfi/0.0.3 ("+*email+")")
 
     client := &http.Client{}
 
