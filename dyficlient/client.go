@@ -52,8 +52,8 @@ func CheckIP() []byte {
 
 // UpdateIP sends a refresh request to the dy.fi server to update current IP address
 // pointing to a hostname. Returns the response body and status as a string.
-func UpdateIP(username *string, password *string, hostname *string, email *string) ([]byte, string) {
-    updateIPURL := updateIPBaseURL + *hostname
+func UpdateIP(username string, password string, hostname string, email string) ([]byte, string) {
+    updateIPURL := updateIPBaseURL + hostname
 
     log.Printf(updateIPURL + "\n")
     request, err := http.NewRequest("GET", updateIPURL, nil)
@@ -62,8 +62,8 @@ func UpdateIP(username *string, password *string, hostname *string, email *strin
         log.Fatal(err)
     }
 
-    request.SetBasicAuth(*username, *password)
-    request.Header.Set("User-Agent", "redyfi/0.0.3 ("+*email+")")
+    request.SetBasicAuth(username, password)
+    request.Header.Set("User-Agent", "redyfi/0.0.3 ("+email+")")
 
     client := &http.Client{}
 
