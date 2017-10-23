@@ -9,7 +9,7 @@ Clone this repository and install by running ```go install```.
 ### Usage
 
 ```
-[path]:
+[path_to_binary]:
   -hostname string
         hostname to update
   -mail string
