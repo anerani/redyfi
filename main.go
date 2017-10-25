@@ -108,7 +108,7 @@ func main() {
 
 		if fieldInterface == reflect.Zero(reflect.TypeOf(fieldInterface)).Interface() {
 			flag.Usage()
-			log.Fatalf("Missing a command line argument for: %s", structType.Field(i).Name)
+			log.Fatalf("Missing an argument for: %s", structType.Field(i).Name)
 		}
 	}
 
