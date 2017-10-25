@@ -44,7 +44,7 @@ func main() {
 	flag.String("username", "", "dy.fi username")
 	flag.String("password", "", "dy.fi password")
 	flag.String("hostname", "", "hostname to update")
-	flag.String("mail", "", "email address for user agent header")
+	flag.String("email", "", "email address for user agent header")
 	configPath := flag.String("configPath", "", "path to a configuration file")
 
 	flag.Parse()
@@ -87,6 +87,19 @@ func main() {
 
 		field.SetString(value)
 	})
+
+	// all options are required (at least at the moment)
+	// so check that all options have values
+	structType := structReflection.Type()
+
+	for i := 0; i < structReflection.NumField(); i++ {
+		fieldInterface := structReflection.Field(i).Interface()
+
+		if fieldInterface == reflect.Zero(reflect.TypeOf(fieldInterface)).Interface() {
+			flag.Usage()
+			log.Fatalf("Missing a command line argument for: %s", structType.Field(i).Name)
+		}
+	}
 
 	IPAddr := dyficlient.CheckIP()
 
