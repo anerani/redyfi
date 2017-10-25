@@ -63,7 +63,7 @@ func UpdateIP(username string, password string, hostname string, email string) (
     }
 
     request.SetBasicAuth(username, password)
-    request.Header.Set("User-Agent", "redyfi/0.0.3 ("+email+")")
+    request.Header.Set("User-Agent", "redyfi/0.1.0 ("+email+")")
 
     client := &http.Client{}
 
