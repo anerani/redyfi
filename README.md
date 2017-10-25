@@ -10,7 +10,7 @@ Clone this repository and install by running ```go install```.
 
 The application supports reading config file out of the box from:
 * ```./Redyfi.json```
-* ```./redyfi/Redyfi.json```
+* ```$HOME/redyfi/Redyfi.json```
 * ```/etc/redyfi/Redyfi.json```
 
 You can define configuration for the client in following format in the config file:
