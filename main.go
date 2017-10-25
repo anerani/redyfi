@@ -1,91 +1,100 @@
 package main
 
 import (
-    "encoding/json"
-    "flag"
-    "log"
-    "os"
+	"encoding/json"
+	"flag"
+	"log"
+	"os"
+	"reflect"
+	"strings"
 
-    "github.com/anerani/redyfi/dyficlient"
+	"github.com/anerani/redyfi/dyficlient"
 )
 
 type configs struct {
-    Username string
-    Password string
-    Hostname string
-    Email    string
+	Username string
+	Password string
+	Hostname string
+	Email    string
 }
 
 var configPathDefaults = [...]string{
-    "Redyfi.json",
-    "/etc/redyfi/Redyfi.json",
+	"Redyfi.json",
+	"/etc/redyfi/Redyfi.json",
 }
 
 func readAndParseConfig(path *string, config *configs) error {
-    fileHandle, err := os.Open(*path)
-    if err != nil {
-        return err
-    }
+	fileHandle, err := os.Open(*path)
+	if err != nil {
+		return err
+	}
 
-    jsonDecoder := json.NewDecoder(fileHandle)
+	jsonDecoder := json.NewDecoder(fileHandle)
 
-    err = jsonDecoder.Decode(&config)
+	err = jsonDecoder.Decode(&config)
 
-    if err != nil {
-        return err
-    }
-    return nil
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func main() {
 
-    username := flag.String("username", "", "dy.fi username")
-    password := flag.String("password", "", "dy.fi password")
-    hostname := flag.String("hostname", "", "hostname to update")
-    email := flag.String("mail", "", "email address for user agent header")
-    configPath := flag.String("configPath", "", "path to a configuration file")
+	flag.String("username", "", "dy.fi username")
+	flag.String("password", "", "dy.fi password")
+	flag.String("hostname", "", "hostname to update")
+	flag.String("mail", "", "email address for user agent header")
+	configPath := flag.String("configPath", "", "path to a configuration file")
 
-    flag.Parse()
+	flag.Parse()
 
-    config := &configs{}
+	config := &configs{}
 
-    if *configPath != "" {
-        if err := readAndParseConfig(configPath, config); err != nil {
-            log.Fatal(err)
-        }
-    } else {
-        for _, path := range configPathDefaults {
+	if *configPath != "" {
+		if err := readAndParseConfig(configPath, config); err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		for _, path := range configPathDefaults {
 
-            if _, err := os.Stat(path); os.IsNotExist(err) {
-                continue
-            }
-            if err := readAndParseConfig(configPath, config); err != nil {
-                log.Fatal(err)
-            }
-            break
-        }
-    }
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				continue
+			}
+			if err := readAndParseConfig(configPath, config); err != nil {
+				log.Fatal(err)
+			}
+			break
+		}
+	}
 
-    if *username != "" {
-        config.Username = *username
-    }
-    if *password != "" {
-        config.Password = *password
-    }
-    if *hostname != "" {
-        config.Hostname = *hostname
-    }
-    if *email != "" {
-        config.Email = *email
-    }
+	structReflection := reflect.ValueOf(config).Elem()
 
-    IPAddr := dyficlient.CheckIP()
+	// override config file settings with CLI arguments
+	flag.VisitAll(func(f *flag.Flag) {
+		value := f.Value.String()
 
-    log.Printf("Seems like current IP address is: %s\n", IPAddr)
-    log.Printf("Attempting to update...")
+		if value == "" {
+			return
+		}
 
-    responseBody, responseStatus := dyficlient.UpdateIP(config.Username, config.Password, config.Hostname, config.Email)
+		key := strings.Title(f.Name)
+		field := structReflection.FieldByName(key)
 
-    log.Printf("Response status: %s\n", responseStatus)
-    log.Printf("Response body: %s\n", responseBody)
+		if field.IsValid() == false {
+			return
+		}
+
+		field.SetString(value)
+	})
+
+	IPAddr := dyficlient.CheckIP()
+
+	log.Printf("Seems like current IP address is: %s\n", IPAddr)
+	log.Printf("Attempting to update...")
+
+	responseBody, responseStatus := dyficlient.UpdateIP(config.Username, config.Password, config.Hostname, config.Email)
+
+	log.Printf("Response status: %s\n", responseStatus)
+	log.Printf("Response body: %s\n", responseBody)
 }
