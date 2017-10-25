@@ -5,6 +5,8 @@ import (
 	"flag"
 	"log"
 	"os"
+	"os/user"
+	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -18,7 +20,7 @@ type configs struct {
 	Email    string
 }
 
-var configPathDefaults = [...]string{
+var configPathDefaults = []string{
 	"Redyfi.json",
 	"/etc/redyfi/Redyfi.json",
 }
@@ -41,6 +43,14 @@ func readAndParseConfig(path *string, config *configs) error {
 
 func main() {
 
+	usr, err := user.Current()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	configPathDefaults = append(configPathDefaults, filepath.Join(usr.HomeDir, ".redyfi", "Redyfi.json"))
+
 	flag.String("username", "", "dy.fi username")
 	flag.String("password", "", "dy.fi password")
 	flag.String("hostname", "", "hostname to update")
@@ -61,6 +71,7 @@ func main() {
 			if _, err := os.Stat(path); os.IsNotExist(err) {
 				continue
 			}
+
 			if err := readAndParseConfig(configPath, config); err != nil {
 				log.Fatal(err)
 			}
