@@ -1,124 +1,124 @@
 package main
 
 import (
-	"encoding/json"
-	"flag"
-	"log"
-	"os"
-	"os/user"
-	"path/filepath"
-	"reflect"
-	"strings"
+    "encoding/json"
+    "flag"
+    "log"
+    "os"
+    "os/user"
+    "path/filepath"
+    "reflect"
+    "strings"
 
-	"github.com/anerani/redyfi/dyficlient"
+    "github.com/anerani/redyfi/dyficlient"
 )
 
 type configs struct {
-	Username string
-	Password string
-	Hostname string
-	Email    string
+    Username string
+    Password string
+    Hostname string
+    Email    string
 }
 
 var configPathDefaults = []string{
-	"Redyfi.json",
-	"/etc/redyfi/Redyfi.json",
+    "Redyfi.json",
+    "/etc/redyfi/Redyfi.json",
 }
 
 func readAndParseConfig(path *string, config *configs) error {
-	fileHandle, err := os.Open(*path)
-	if err != nil {
-		return err
-	}
+    fileHandle, err := os.Open(*path)
+    if err != nil {
+        return err
+    }
 
-	jsonDecoder := json.NewDecoder(fileHandle)
+    jsonDecoder := json.NewDecoder(fileHandle)
 
-	err = jsonDecoder.Decode(&config)
+    err = jsonDecoder.Decode(&config)
 
-	if err != nil {
-		return err
-	}
-	return nil
+    if err != nil {
+        return err
+    }
+    return nil
 }
 
 func main() {
 
-	usr, err := user.Current()
+    usr, err := user.Current()
 
-	if err != nil {
-		log.Fatal(err)
-	}
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	configPathDefaults = append(configPathDefaults, filepath.Join(usr.HomeDir, ".redyfi", "Redyfi.json"))
+    configPathDefaults = append(configPathDefaults, filepath.Join(usr.HomeDir, ".redyfi", "Redyfi.json"))
 
-	flag.String("username", "", "dy.fi username")
-	flag.String("password", "", "dy.fi password")
-	flag.String("hostname", "", "hostname to update")
-	flag.String("email", "", "email address for user agent header")
-	configPath := flag.String("configPath", "", "path to a configuration file")
+    flag.String("username", "", "dy.fi username")
+    flag.String("password", "", "dy.fi password")
+    flag.String("hostname", "", "hostname to update")
+    flag.String("email", "", "email address for user agent header")
+    configPath := flag.String("configPath", "", "path to a configuration file")
 
-	flag.Parse()
+    flag.Parse()
 
-	config := &configs{}
+    config := &configs{}
 
-	if *configPath != "" {
-		if err := readAndParseConfig(configPath, config); err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		for _, path := range configPathDefaults {
+    if *configPath != "" {
+        if err := readAndParseConfig(configPath, config); err != nil {
+            log.Fatal(err)
+        }
+    } else {
+        for _, path := range configPathDefaults {
 
-			if _, err := os.Stat(path); os.IsNotExist(err) {
-				continue
-			}
+            if _, err := os.Stat(path); os.IsNotExist(err) {
+                continue
+            }
 
-			if err := readAndParseConfig(configPath, config); err != nil {
-				log.Fatal(err)
-			}
-			break
-		}
-	}
+            if err := readAndParseConfig(configPath, config); err != nil {
+                log.Fatal(err)
+            }
+            break
+        }
+    }
 
-	structReflection := reflect.ValueOf(config).Elem()
+    structReflection := reflect.ValueOf(config).Elem()
 
-	// override config file settings with CLI arguments
-	flag.VisitAll(func(f *flag.Flag) {
-		value := f.Value.String()
+    // override config file settings with CLI arguments
+    flag.VisitAll(func(f *flag.Flag) {
+        value := f.Value.String()
 
-		if value == "" {
-			return
-		}
+        if value == "" {
+            return
+        }
 
-		key := strings.Title(f.Name)
-		field := structReflection.FieldByName(key)
+        key := strings.Title(f.Name)
+        field := structReflection.FieldByName(key)
 
-		if field.IsValid() == false {
-			return
-		}
+        if field.IsValid() == false {
+            return
+        }
 
-		field.SetString(value)
-	})
+        field.SetString(value)
+    })
 
-	// all options are required (at least at the moment)
-	// so check that all options have values
-	structType := structReflection.Type()
+    // all options are required (at least at the moment)
+    // so check that all options have values
+    structType := structReflection.Type()
 
-	for i := 0; i < structReflection.NumField(); i++ {
-		fieldInterface := structReflection.Field(i).Interface()
+    for i := 0; i < structReflection.NumField(); i++ {
+        fieldInterface := structReflection.Field(i).Interface()
 
-		if fieldInterface == reflect.Zero(reflect.TypeOf(fieldInterface)).Interface() {
-			flag.Usage()
-			log.Fatalf("Missing an argument for: %s", structType.Field(i).Name)
-		}
-	}
+        if fieldInterface == reflect.Zero(reflect.TypeOf(fieldInterface)).Interface() {
+            flag.Usage()
+            log.Fatalf("Missing an argument for: %s", structType.Field(i).Name)
+        }
+    }
 
-	IPAddr := dyficlient.CheckIP()
+    IPAddr := dyficlient.CheckIP()
 
-	log.Printf("Seems like current IP address is: %s\n", IPAddr)
-	log.Printf("Attempting to update...")
+    log.Printf("Seems like current IP address is: %s\n", IPAddr)
+    log.Printf("Attempting to update...")
 
-	responseBody, responseStatus := dyficlient.UpdateIP(config.Username, config.Password, config.Hostname, config.Email)
+    responseBody, responseStatus := dyficlient.UpdateIP(config.Username, config.Password, config.Hostname, config.Email)
 
-	log.Printf("Response status: %s\n", responseStatus)
-	log.Printf("Response body: %s\n", responseBody)
+    log.Printf("Response status: %s\n", responseStatus)
+    log.Printf("Response body: %s\n", responseBody)
 }
