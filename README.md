@@ -4,7 +4,7 @@ Simple app to update [dy.fi](https://www.dy.fi) DynDNS IP address for a hostname
 
 ### Install
 
-Clone this repository and install by running ```go install```.
+Clone this repository and install by running ```go get github.com/anerani/redyfi```.
 
 ### Configuration
 
