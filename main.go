@@ -25,8 +25,9 @@ var configPathDefaults = []string{
     "/etc/redyfi/Redyfi.json",
 }
 
-func readAndParseConfig(path *string, config *configs) error {
-    fileHandle, err := os.Open(*path)
+func readAndParseConfig(path string, config *configs) error {
+
+    fileHandle, err := os.Open(path)
     if err != nil {
         return err
     }
@@ -62,7 +63,7 @@ func main() {
     config := &configs{}
 
     if *configPath != "" {
-        if err := readAndParseConfig(configPath, config); err != nil {
+        if err := readAndParseConfig(*configPath, config); err != nil {
             log.Fatal(err)
         }
     } else {
@@ -72,7 +73,7 @@ func main() {
                 continue
             }
 
-            if err := readAndParseConfig(configPath, config); err != nil {
+            if err := readAndParseConfig(path, config); err != nil {
                 log.Fatal(err)
             }
             break
@@ -101,6 +102,7 @@ func main() {
 
     // all options are required (at least at the moment)
     // so check that all options have values
+
     structType := structReflection.Type()
 
     for i := 0; i < structReflection.NumField(); i++ {
