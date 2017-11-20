@@ -4,11 +4,13 @@ import (
     "encoding/json"
     "flag"
     "log"
+    "math/rand"
     "os"
     "os/user"
     "path/filepath"
     "reflect"
     "strings"
+    "time"
 
     "github.com/anerani/redyfi/dyficlient"
 )
@@ -18,6 +20,11 @@ type configs struct {
     Password string
     Hostname string
     Email    string
+}
+
+type ipAddressState struct {
+    IP        string
+    Timestamp string
 }
 
 var configPathDefaults = []string{
@@ -117,10 +124,30 @@ func main() {
     IPAddr := dyficlient.CheckIP()
 
     log.Printf("Seems like current IP address is: %s\n", IPAddr)
-    log.Printf("Attempting to update...")
+    log.Printf("Attempting to perform an initial update...")
 
     responseBody, responseStatus := dyficlient.UpdateIP(config.Username, config.Password, config.Hostname, config.Email)
 
     log.Printf("Response status: %s\n", responseStatus)
     log.Printf("Response body: %s\n", responseBody)
+
+    // dy.fi spesification recommends using slightly random weekly interval
+    // for updates to avoid congestion
+    oneWeekFromNowInMinutes := time.Duration((60*24*6 + rand.Intn(60*23+59))) * time.Minute
+
+    c := time.Tick(oneWeekFromNowInMinutes)
+
+    for _ = range c {
+        log.Print("About one week has passed. Attempting an update...")
+        IPAddr := dyficlient.CheckIP()
+
+        log.Printf("Seems like current IP address is: %s\n", IPAddr)
+
+        responseBody, responseStatus := dyficlient.UpdateIP(config.Username, config.Password, config.Hostname, config.Email)
+
+        log.Printf("Response status: %s\n", responseStatus)
+        log.Printf("Response body: %s\n", responseBody)
+        log.Print("Going back to sleep.")
+    }
+
 }
