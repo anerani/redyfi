@@ -1,6 +1,7 @@
 package main
 
 import (
+    "bytes"
     "encoding/json"
     "flag"
     "log"
@@ -134,20 +135,34 @@ func main() {
     // dy.fi spesification recommends using slightly random weekly interval
     // for updates to avoid congestion
     oneWeekFromNowInMinutes := time.Duration((60*24*6 + rand.Intn(60*23+59))) * time.Minute
+    oneHourFromNowInMinutes := 60 * time.Minute
+    weeklyTicker := time.NewTicker(oneWeekFromNowInMinutes)
+    hourlyTicker := time.NewTicker(oneHourFromNowInMinutes)
 
-    c := time.Tick(oneWeekFromNowInMinutes)
+    for {
+        select {
+        case <-hourlyTicker.C:
+            HourlyIPAddrCheck := dyficlient.CheckIP()
+            log.Printf("Seems like current IP address is: %s\n", IPAddr)
+            if bytes.Equal(IPAddr, HourlyIPAddrCheck) == false {
+                log.Print("Address has changed since last update. Updating before weekly update...")
+                responseBody, responseStatus := dyficlient.UpdateIP(config.Username, config.Password, config.Hostname, config.Email)
+                log.Printf("Response status: %s\n", responseStatus)
+                log.Printf("Response body: %s\n", responseBody)
+                log.Print("Going back to sleep.")
+            }
+        case <-weeklyTicker.C:
+            log.Print("About one week has passed. Attempting an update...")
+            IPAddr := dyficlient.CheckIP()
 
-    for _ = range c {
-        log.Print("About one week has passed. Attempting an update...")
-        IPAddr := dyficlient.CheckIP()
+            log.Printf("Seems like current IP address is: %s\n", IPAddr)
 
-        log.Printf("Seems like current IP address is: %s\n", IPAddr)
+            responseBody, responseStatus := dyficlient.UpdateIP(config.Username, config.Password, config.Hostname, config.Email)
 
-        responseBody, responseStatus := dyficlient.UpdateIP(config.Username, config.Password, config.Hostname, config.Email)
-
-        log.Printf("Response status: %s\n", responseStatus)
-        log.Printf("Response body: %s\n", responseBody)
-        log.Print("Going back to sleep.")
+            log.Printf("Response status: %s\n", responseStatus)
+            log.Printf("Response body: %s\n", responseBody)
+            log.Print("Going back to sleep.")
+        }
     }
 
 }
