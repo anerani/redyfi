@@ -23,11 +23,6 @@ type configs struct {
     Email    string
 }
 
-type ipAddressState struct {
-    IP        string
-    Timestamp string
-}
-
 var configPathDefaults = []string{
     "Redyfi.json",
     "/etc/redyfi/Redyfi.json",
