@@ -57,4 +57,6 @@ After the configuration file deployment, make sure that the file permissions are
         dy.fi password
   -username string
         dy.fi username
+  -daemon bool
+        run redyfi as a service
 ```

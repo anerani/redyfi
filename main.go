@@ -94,6 +94,7 @@ func main() {
     flag.String("password", "", "dy.fi password")
     flag.String("hostname", "", "hostname to update")
     flag.String("email", "", "email address for user agent header")
+    runAsDaemon := flag.Bool("daemon", false, "run redyfi as a service")
     configPath := flag.String("configPath", "", "path to a configuration file")
 
     flag.Parse()
@@ -134,6 +135,10 @@ func main() {
     err = dyfiClient.UpdateIP()
     if err != nil {
         log.Fatal(err)
+    }
+
+    if *runAsDaemon == false {
+        return
     }
 
     log.Println("[Info] Going to sleep.")

@@ -7,7 +7,7 @@ Wants=network-online.target systemd-networkd-wait-online.service
 Restart=on-abnormal
 User=redyfi
 Group=redyfi
-ExecStart=/usr/local/bin/redyfi -configPath=/etc/redyfi/Redyfi.json
+ExecStart=/usr/local/bin/redyfi -configPath=/etc/redyfi/Redyfi.json -daemon
 KillMode=mixed
 KillSignal=SIGQUIT
 TimeoutStopSec=5s
