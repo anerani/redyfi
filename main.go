@@ -1,163 +1,188 @@
 package main
 
 import (
-    "bytes"
-    "encoding/json"
-    "flag"
-    "log"
-    "math/rand"
-    "os"
-    "os/user"
-    "path/filepath"
-    "reflect"
-    "strings"
-    "time"
+	"bytes"
+	"encoding/json"
+	"flag"
+	"log"
+	"math/rand"
+	"os"
+	"os/user"
+	"path/filepath"
+	"reflect"
+	"strings"
+	"time"
 
-    "github.com/anerani/redyfi/dyficlient"
+	"github.com/anerani/redyfi/dyfi"
 )
 
-type configs struct {
-    Username string
-    Password string
-    Hostname string
-    Email    string
-}
-
 var configPathDefaults = []string{
-    "Redyfi.json",
-    "/etc/redyfi/Redyfi.json",
+	"Redyfi.json",
+	"/etc/redyfi/Redyfi.json",
 }
 
-func readAndParseConfig(path string, config *configs) error {
+type configs struct {
+	Username string
+	Password string
+	Hostname string
+	Email    string
+}
 
-    fileHandle, err := os.Open(path)
-    if err != nil {
-        return err
-    }
+func readAndDecodeConfig(path string, config *configs) error {
 
-    jsonDecoder := json.NewDecoder(fileHandle)
+	fileHandle, err := os.Open(path)
+	if err != nil {
+		return err
+	}
 
-    err = jsonDecoder.Decode(&config)
+	jsonDecoder := json.NewDecoder(fileHandle)
 
-    if err != nil {
-        return err
-    }
-    return nil
+	err = jsonDecoder.Decode(&config)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateConfig(config *configs) {
+	structReflection := reflect.ValueOf(config).Elem()
+
+	// override config file settings with CLI arguments
+	flag.VisitAll(func(f *flag.Flag) {
+		value := f.Value.String()
+
+		if value == "" {
+			return
+		}
+
+		key := strings.Title(f.Name)
+		field := structReflection.FieldByName(key)
+
+		if field.IsValid() == false {
+			return
+		}
+
+		field.SetString(value)
+	})
+
+	// check that all configuration parameters have values
+
+	structType := structReflection.Type()
+
+	for i := 0; i < structReflection.NumField(); i++ {
+		fieldInterface := structReflection.Field(i).Interface()
+
+		if fieldInterface == reflect.Zero(reflect.TypeOf(fieldInterface)).Interface() {
+			flag.Usage()
+			log.Fatalf("[ERROR] Missing an argument for: %s", structType.Field(i).Name)
+		}
+	}
 }
 
 func main() {
 
-    usr, err := user.Current()
+	usr, err := user.Current()
 
-    if err != nil {
-        log.Fatal(err)
-    }
+	if err != nil {
+		log.Fatal(err)
+	}
 
-    configPathDefaults = append(configPathDefaults, filepath.Join(usr.HomeDir, ".redyfi", "Redyfi.json"))
+	configPathDefaults = append(configPathDefaults, filepath.Join(usr.HomeDir, ".redyfi", "Redyfi.json"))
 
-    flag.String("username", "", "dy.fi username")
-    flag.String("password", "", "dy.fi password")
-    flag.String("hostname", "", "hostname to update")
-    flag.String("email", "", "email address for user agent header")
-    configPath := flag.String("configPath", "", "path to a configuration file")
+	flag.String("username", "", "dy.fi username")
+	flag.String("password", "", "dy.fi password")
+	flag.String("hostname", "", "hostname to update")
+	flag.String("email", "", "email address for user agent header")
+	configPath := flag.String("configPath", "", "path to a configuration file")
 
-    flag.Parse()
+	flag.Parse()
 
-    config := &configs{}
+	config := &configs{}
 
-    if *configPath != "" {
-        if err := readAndParseConfig(*configPath, config); err != nil {
-            log.Fatal(err)
-        }
-    } else {
-        for _, path := range configPathDefaults {
+	if *configPath != "" {
+		if err := readAndDecodeConfig(*configPath, config); err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		for _, path := range configPathDefaults {
 
-            if _, err := os.Stat(path); os.IsNotExist(err) {
-                continue
-            }
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				continue
+			}
 
-            if err := readAndParseConfig(path, config); err != nil {
-                log.Fatal(err)
-            }
-            break
-        }
-    }
+			if err := readAndDecodeConfig(path, config); err != nil {
+				log.Fatal(err)
+			}
+			break
+		}
+	}
+	validateConfig(config)
 
-    structReflection := reflect.ValueOf(config).Elem()
+	dyfiClient := &dyfi.Client{
+		Username: config.Username,
+		Password: config.Password,
+		Hostname: config.Hostname,
+		Email:    config.Email,
+	}
 
-    // override config file settings with CLI arguments
-    flag.VisitAll(func(f *flag.Flag) {
-        value := f.Value.String()
+	IPAddr, err := dyfiClient.CheckIP()
 
-        if value == "" {
-            return
-        }
+	log.Printf("[INFO] Seems like current IP address is: %s\n", IPAddr)
+	log.Printf("[INFO] Attempting to perform an initial update...")
 
-        key := strings.Title(f.Name)
-        field := structReflection.FieldByName(key)
+	err = dyfiClient.UpdateIP()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-        if field.IsValid() == false {
-            return
-        }
+	log.Println("[Info] Going to sleep.")
 
-        field.SetString(value)
-    })
+	// dy.fi spesification recommends using slightly random weekly interval
+	// for updates to avoid congestions (https://www.dy.fi/page/specification)
+	oneWeekDuration := time.Duration((60*24*6 + rand.Intn(60*23+59))) * time.Minute
+	oneHourDuration := 60 * time.Minute
+	weeklyTick := time.NewTicker(oneWeekDuration)
+	hourlyTick := time.NewTicker(oneHourDuration)
 
-    // all options are required (at least at the moment)
-    // so check that all options have values
+	for {
+		select {
 
-    structType := structReflection.Type()
+		case <-hourlyTick.C:
+			HourlyIPAddrCheck, err := dyfiClient.CheckIP()
 
-    for i := 0; i < structReflection.NumField(); i++ {
-        fieldInterface := structReflection.Field(i).Interface()
+			if err != nil {
+				log.Print("[ERROR]: Checking IP address failed.")
+				log.Print(err)
+				return
+			}
 
-        if fieldInterface == reflect.Zero(reflect.TypeOf(fieldInterface)).Interface() {
-            flag.Usage()
-            log.Fatalf("Missing an argument for: %s", structType.Field(i).Name)
-        }
-    }
+			log.Printf("[INFO] Seems like current IP address is: %s\n", IPAddr)
 
-    IPAddr := dyficlient.CheckIP()
+			if bytes.Equal(IPAddr, HourlyIPAddrCheck) == false {
+				log.Print("[INFO] Address has changed since last update. Updating before weekly update...")
+				IPAddr = HourlyIPAddrCheck
 
-    log.Printf("Seems like current IP address is: %s\n", IPAddr)
-    log.Printf("Attempting to perform an initial update...")
+				err := dyfiClient.UpdateIP()
+				if err != nil {
+					log.Fatal(err)
+				}
 
-    responseBody, responseStatus := dyficlient.UpdateIP(config.Username, config.Password, config.Hostname, config.Email)
+				weeklyTick = time.NewTicker(oneWeekDuration)
+			} else {
+				log.Println("[INFO] No need to update.")
+			}
 
-    log.Printf("Response status: %s\n", responseStatus)
-    log.Printf("Response body: %s\n", responseBody)
+		case <-weeklyTick.C:
+			log.Print("[INFO] About one week has passed. Attempting an update...")
 
-    // dy.fi spesification recommends using slightly random weekly interval
-    // for updates to avoid congestion
-    oneWeekFromNowInMinutes := time.Duration((60*24*6 + rand.Intn(60*23+59))) * time.Minute
-    oneHourFromNowInMinutes := 60 * time.Minute
-    weeklyTicker := time.NewTicker(oneWeekFromNowInMinutes)
-    hourlyTicker := time.NewTicker(oneHourFromNowInMinutes)
+			err = dyfiClient.UpdateIP()
+			if err != nil {
+				log.Print(err)
+			}
 
-    for {
-        select {
-        case <-hourlyTicker.C:
-            HourlyIPAddrCheck := dyficlient.CheckIP()
-            log.Printf("Seems like current IP address is: %s\n", IPAddr)
-            if bytes.Equal(IPAddr, HourlyIPAddrCheck) == false {
-                log.Print("Address has changed since last update. Updating before weekly update...")
-                responseBody, responseStatus := dyficlient.UpdateIP(config.Username, config.Password, config.Hostname, config.Email)
-                log.Printf("Response status: %s\n", responseStatus)
-                log.Printf("Response body: %s\n", responseBody)
-                log.Print("Going back to sleep.")
-            }
-        case <-weeklyTicker.C:
-            log.Print("About one week has passed. Attempting an update...")
-            IPAddr := dyficlient.CheckIP()
-
-            log.Printf("Seems like current IP address is: %s\n", IPAddr)
-
-            responseBody, responseStatus := dyficlient.UpdateIP(config.Username, config.Password, config.Hostname, config.Email)
-
-            log.Printf("Response status: %s\n", responseStatus)
-            log.Printf("Response body: %s\n", responseBody)
-            log.Print("Going back to sleep.")
-        }
-    }
+			log.Print("[INFO] Going back to sleep.")
+		}
+	}
 
 }
