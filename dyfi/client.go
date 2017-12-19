@@ -72,7 +72,7 @@ func (c *Client) UpdateIP() error {
     }
 
     request.SetBasicAuth(c.Username, c.Password)
-    request.Header.Set("User-Agent", "redyfi/0.2.0 ("+c.Email+")")
+    request.Header.Set("User-Agent", "redyfi/1.0.0 ("+c.Email+")")
 
     httpClient := &http.Client{}
 
