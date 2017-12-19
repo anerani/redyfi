@@ -41,6 +41,8 @@ You can define configuration for the client in following format in the config fi
 }
 ```
 
+After the configuration file deployment, make sure that the file permissions are restricted to the user and group only.
+
 ### Usage
 
 ```

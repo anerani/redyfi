@@ -1,0 +1,18 @@
+[Unit]
+Description=Redyfi - Dy.fi IP Updater
+After=network-online.target
+Wants=network-online.target systemd-networkd-wait-online.service
+
+[Service]
+Restart=on-abnormal
+User=redyfi
+Group=redyfi
+ExecStart=/usr/local/bin/redyfi -configPath=/etc/redyfi/Redyfi.json
+KillMode=mixed
+KillSignal=SIGQUIT
+TimeoutStopSec=5s
+ProtectHome=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target
