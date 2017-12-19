@@ -7,11 +7,21 @@ import (
 	"net"
 	"net/http"
 	"regexp"
+	"strings"
 )
 
 var (
-	checkIPURL      = "http://checkip.dy.fi/"
-	updateIPBaseURL = "https://www.dy.fi/nic/update?hostname="
+	checkIPURL         = "http://checkip.dy.fi/"
+	updateIPBaseURL    = "https://www.dy.fi/nic/update?hostname="
+	bodyStatusMessages = map[string]string{
+		"nohost": "No 'hostname' CGI parameter given in the request, or the hostname is not allocated for the user.",
+		"nofqdn": "The given hostname is not a valid .dy.fi FQDN.",
+		"badip":  "The client IP address is not a valid IP address, or is not registered to a Finnish organisation.",
+		"dnserr": "The request failed due to a technical problem at the dy.fi service.",
+		"abuse":  "The request was denied because of abuse (too many requests in a short time).",
+		"nochg":  "The request was valid and processed, but did not cause a change in the DNS information since the information had not changed since last update (the client IP address had not changed).",
+		"good":   "The request was valid and processed successfully, and caused the hostname to be pointed to the IP address returned.",
+	}
 )
 
 type Client struct {
@@ -77,16 +87,22 @@ func (c *Client) UpdateIP() error {
 	if err != nil {
 		return err
 	}
+	bodyString := strings.TrimSpace(string(body))
 
 	if response.StatusCode != 200 {
-		return fmt.Errorf("[ERROR] Requesting IP update failed. Server returned: %s (%s)", body, response.Status)
+		return fmt.Errorf("[ERROR] Requesting IP update failed. Server returned: %s (%s)", bodyString, response.Status)
 	}
 
-	_, err = ioutil.ReadAll(response.Body)
-	if err != nil {
-		return err
+	if _, exists := bodyStatusMessages[bodyString]; exists == false {
+		return fmt.Errorf("[ERROR] Unknown status message returned by the server: %s (%s)", bodyString, response.Status)
 	}
 
+	statusMessage := bodyStatusMessages[bodyString]
+
+	if bodyString != "good" && bodyString != "nochg" {
+		return fmt.Errorf("[ERROR] %s", statusMessage)
+	}
+	log.Println("[INFO]", statusMessage)
 	log.Println("[INFO] Update successful.")
 
 	return nil
