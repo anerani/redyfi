@@ -64,16 +64,21 @@ func validateConfig(config *dyfi.ClientConfig) error {
 
 	// check that all configuration parameters have values
 
-	structType := structReflection.Type()
+	var configMap map[string]interface{}
+	tmp, err := json.Marshal(config)
 
-	for i := 0; i < structReflection.NumField(); i++ {
-		fieldInterface := structReflection.Field(i).Interface()
+	if err != nil {
+		return err
+	}
 
-		if fieldInterface == reflect.Zero(reflect.TypeOf(fieldInterface)).Interface() {
-			fmt.Printf("%s", fieldInterface)
-			return fmt.Errorf("[ERROR] Missing an argument for: %s", structType.Field(i).Name)
+	json.Unmarshal(tmp, &configMap)
+
+	for key, value := range configMap {
+		if value == "" {
+			return fmt.Errorf("[ERROR] Missing a value for: %s", key)
 		}
 	}
+
 	return nil
 }
 
