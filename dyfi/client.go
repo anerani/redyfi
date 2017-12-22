@@ -91,7 +91,7 @@ func (c *Client) UpdateIP() error {
 	}
 
 	request.SetBasicAuth(c.Settings.Username, c.Settings.Password)
-	request.Header.Set("User-Agent", "redyfi/1.0.1 ("+c.Settings.Email+")")
+	request.Header.Set("User-Agent", "redyfi/1.0.2 ("+c.Settings.Email+")")
 
 	log.Println("[INFO] Updating...")
 	response, err := c.Client.Do(request)
