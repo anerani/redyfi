@@ -156,7 +156,7 @@ func main() {
 			HourlyIPAddrCheck, err := client.CheckIP()
 
 			if err != nil {
-				log.Print("[ERROR]: Checking IP address failed.")
+				log.Println("[ERROR]: Checking IP address failed.")
 				log.Print(err)
 				return
 			}
@@ -164,7 +164,7 @@ func main() {
 			log.Printf("[INFO] Seems like current IP address is: %s\n", IPAddr)
 
 			if bytes.Equal(IPAddr, HourlyIPAddrCheck) == false {
-				log.Print("[INFO] Address has changed since last update. Updating before weekly update...")
+				log.Println("[INFO] Address has changed since last update. Updating before weekly update...")
 				IPAddr = HourlyIPAddrCheck
 
 				err := client.UpdateIP()
@@ -178,7 +178,7 @@ func main() {
 			}
 
 		case <-weeklyTick.C:
-			log.Print("[INFO] About one week has passed. Attempting an update...")
+			log.Println("[INFO] About one week has passed. Attempting an update...")
 
 			err = client.UpdateIP()
 			if err != nil {
