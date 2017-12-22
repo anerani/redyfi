@@ -37,8 +37,15 @@ type Client struct {
 }
 
 func NewClient(config *ClientConfig) *Client {
+
+	transport := &http.Transport{
+		DisableKeepAlives: true,
+	}
+
 	return &Client{
-		Client:   &http.Client{},
+		Client: &http.Client{
+			Transport: transport,
+		},
 		Settings: *config,
 	}
 }
