@@ -24,15 +24,27 @@ var (
 	}
 )
 
-type Client struct {
+type ClientConfig struct {
 	Username string
 	Password string
 	Hostname string
 	Email    string
 }
 
+type Client struct {
+	Client   *http.Client
+	Settings ClientConfig
+}
+
+func NewClient(config *ClientConfig) *Client {
+	return &Client{
+		Client:   &http.Client{},
+		Settings: *config,
+	}
+}
+
 // CheckIP gets the current IP address using the dy.fi service.
-func (*Client) CheckIP() ([]byte, error) {
+func (c *Client) CheckIP() ([]byte, error) {
 	response, err := http.Get(checkIPURL)
 
 	if err != nil {
@@ -64,20 +76,18 @@ func (*Client) CheckIP() ([]byte, error) {
 // UpdateIP sends a refresh request to the dy.fi server to update current IP address
 // pointing to a hostname. Returns the response body and status as a string.
 func (c *Client) UpdateIP() error {
-	updateIPURL := updateIPBaseURL + c.Hostname
+	updateIPURL := updateIPBaseURL + c.Settings.Hostname
 
 	request, err := http.NewRequest("GET", updateIPURL, nil)
 	if err != nil {
 		return err
 	}
 
-	request.SetBasicAuth(c.Username, c.Password)
-	request.Header.Set("User-Agent", "redyfi/1.0.0 ("+c.Email+")")
-
-	httpClient := &http.Client{}
+	request.SetBasicAuth(c.Settings.Username, c.Settings.Password)
+	request.Header.Set("User-Agent", "redyfi/1.0.0 ("+c.Settings.Email+")")
 
 	log.Println("[INFO] Updating...")
-	response, err := httpClient.Do(request)
+	response, err := c.Client.Do(request)
 	if err != nil {
 		return err
 	}

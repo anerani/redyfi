@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
 	"os"
@@ -21,14 +22,7 @@ var configPathDefaults = []string{
 	"/etc/redyfi/Redyfi.json",
 }
 
-type configs struct {
-	Username string
-	Password string
-	Hostname string
-	Email    string
-}
-
-func readAndDecodeConfig(path string, config *configs) error {
+func readAndDecodeConfig(path string, config *dyfi.ClientConfig) error {
 
 	fileHandle, err := os.Open(path)
 	defer fileHandle.Close()
@@ -47,7 +41,7 @@ func readAndDecodeConfig(path string, config *configs) error {
 	return nil
 }
 
-func validateConfig(config *configs) {
+func validateConfig(config *dyfi.ClientConfig) error {
 	structReflection := reflect.ValueOf(config).Elem()
 
 	// override config file settings with CLI arguments
@@ -76,10 +70,11 @@ func validateConfig(config *configs) {
 		fieldInterface := structReflection.Field(i).Interface()
 
 		if fieldInterface == reflect.Zero(reflect.TypeOf(fieldInterface)).Interface() {
-			flag.Usage()
-			log.Fatalf("[ERROR] Missing an argument for: %s", structType.Field(i).Name)
+			fmt.Printf("%s", fieldInterface)
+			return fmt.Errorf("[ERROR] Missing an argument for: %s", structType.Field(i).Name)
 		}
 	}
+	return nil
 }
 
 func main() {
@@ -101,7 +96,7 @@ func main() {
 
 	flag.Parse()
 
-	config := &configs{}
+	config := &dyfi.ClientConfig{}
 
 	if *configPath != "" {
 		if err := readAndDecodeConfig(*configPath, config); err != nil {
@@ -120,21 +115,18 @@ func main() {
 			break
 		}
 	}
-	validateConfig(config)
-
-	dyfiClient := &dyfi.Client{
-		Username: config.Username,
-		Password: config.Password,
-		Hostname: config.Hostname,
-		Email:    config.Email,
+	if err := validateConfig(config); err != nil {
+		log.Fatal(err)
 	}
 
-	IPAddr, err := dyfiClient.CheckIP()
+	client := dyfi.NewClient(config)
+
+	IPAddr, err := client.CheckIP()
 
 	log.Printf("[INFO] Seems like current IP address is: %s\n", IPAddr)
 	log.Printf("[INFO] Attempting to perform an initial update...")
 
-	err = dyfiClient.UpdateIP()
+	err = client.UpdateIP()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -156,7 +148,7 @@ func main() {
 		select {
 
 		case <-hourlyTick.C:
-			HourlyIPAddrCheck, err := dyfiClient.CheckIP()
+			HourlyIPAddrCheck, err := client.CheckIP()
 
 			if err != nil {
 				log.Print("[ERROR]: Checking IP address failed.")
@@ -170,7 +162,7 @@ func main() {
 				log.Print("[INFO] Address has changed since last update. Updating before weekly update...")
 				IPAddr = HourlyIPAddrCheck
 
-				err := dyfiClient.UpdateIP()
+				err := client.UpdateIP()
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -183,7 +175,7 @@ func main() {
 		case <-weeklyTick.C:
 			log.Print("[INFO] About one week has passed. Attempting an update...")
 
-			err = dyfiClient.UpdateIP()
+			err = client.UpdateIP()
 			if err != nil {
 				log.Print(err)
 			}
